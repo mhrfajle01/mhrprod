@@ -1,4 +1,5 @@
 import React, { useState } from 'react';
+import { createPortal } from 'react-dom';
 
 export default function Export({ log, updateLog }) {
   const handleExport = () => {
@@ -52,14 +53,14 @@ export default function Export({ log, updateLog }) {
   return (
     <div className="panel" id="actionsPanel">
       <div className="actions">
-        <button className="btn btn-primary" onClick={handleExport}>
+        <button id="btnExport" className="btn btn-primary" onClick={handleExport}>
           Export today (.csv)
         </button>
         <button className="btn btn-ghost" onClick={() => setShowModal(true)}>Reset day</button>
       </div>
       <p className="export-note">Download your data before it resets.</p>
       
-      {showModal && (
+      {showModal && createPortal(
         <div style={{position:'fixed', top:0, left:0, right:0, bottom:0, background:'rgba(0,0,0,0.5)', display:'flex', alignItems:'center', justifyContent:'center', zIndex:9999}}>
           <div className="panel" style={{maxWidth:'300px', textAlign:'center', margin:'20px'}}>
             <h3 style={{marginTop:0, color:'var(--bad)'}}>Reset Today?</h3>
@@ -69,7 +70,8 @@ export default function Export({ log, updateLog }) {
               <button className="btn btn-primary" style={{background:'var(--bad)', boxShadow:'0 4px 0 #8c3b29'}} onClick={confirmReset}>Yes, Reset</button>
             </div>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
     </div>
   );

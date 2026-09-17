@@ -3,6 +3,7 @@ import './App.css';
 import { auth } from './firebase';
 import { onAuthStateChanged, signOut } from 'firebase/auth';
 import { useHisabData } from './hooks/useHisabData';
+import { useShortcuts } from './hooks/useShortcuts';
 import Auth from './components/auth/Auth';
 import Timer from './components/timer/Timer';
 import Readout from './components/readout/Readout';
@@ -29,6 +30,8 @@ function App() {
   const [targetDate, setTargetDate] = useState(null);
 
   const { settings, log, updateSettings, updateLog, loading: dataLoading } = useHisabData(user, targetDate);
+
+  useShortcuts(settings);
 
   if (authLoading || (user && dataLoading)) {
     return <div className="wrap"><div className="head"><h1>Loading...</h1></div></div>;
@@ -57,16 +60,19 @@ function App() {
           <>
             <div style={{ display: 'flex', gap: '8px', marginBottom: '16px' }}>
               <button 
+                id="btnNavTracker"
                 className={`btn ${viewMode === 'tracker' && !targetDate ? 'btn-primary' : 'btn-ghost'}`} 
                 onClick={() => { setViewMode('tracker'); setTargetDate(null); }}>
                 Today's Shift
               </button>
               <button 
+                id="btnNavReports"
                 className={`btn ${viewMode === 'reports' ? 'btn-primary' : 'btn-ghost'}`} 
                 onClick={() => setViewMode('reports')}>
                 Reports
               </button>
               <button 
+                id="btnNavSettings"
                 className={`btn ${viewMode === 'settings' ? 'btn-primary' : 'btn-ghost'}`} 
                 onClick={() => setViewMode('settings')}>
                 Settings

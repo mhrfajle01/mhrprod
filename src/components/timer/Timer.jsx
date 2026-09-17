@@ -114,13 +114,13 @@ export default function Timer({ settings, log, updateLog }) {
       </div>
       
       <div className="btn-row" id="timerButtons">
-        {idle && <button className="btn btn-primary" onClick={handleStart}>Start shift</button>}
-        {running && !brk && <button className="btn btn-ghost" onClick={handlePause}>Pause</button>}
-        {paused && <button className="btn btn-ghost" onClick={handleResume}>Resume</button>}
-        {!idle && !stopped && <button className="btn btn-ghost" onClick={handleStop}>Stop</button>}
+        {idle && <button id="btnStart" className="btn btn-primary" onClick={handleStart}>Start shift</button>}
+        {running && !brk && <button id="btnPause" className="btn btn-ghost" onClick={handlePause}>Pause</button>}
+        {paused && <button id="btnResume" className="btn btn-ghost" onClick={handleResume}>Resume</button>}
+        {!idle && !stopped && <button id="btnStop" className="btn btn-ghost" onClick={handleStop}>Stop</button>}
         {stopped && <button className="btn btn-ghost" onClick={() => updateLog({...log, timer: {...timer, status: 'paused', stoppedAt: null}})}>Reopen</button>}
         {running && (
-          <button className="btn btn-ghost" onClick={handleBreak}>
+          <button id="btnBreak" className="btn btn-ghost" onClick={handleBreak}>
             {brk ? `End break · ${fmtMinShort((now - timer.breakSegmentStart) / 60000)}` : 'Take break'}
           </button>
         )}

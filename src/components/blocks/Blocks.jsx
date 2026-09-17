@@ -165,6 +165,7 @@ export default function Blocks({ settings, log, updateLog, isEditing }) {
                 )}
               </div>
               <input 
+                id={nowSlot === si ? 'activeBlockInput' : undefined}
                 type="number" 
                 inputMode="decimal"
                 pattern="[0-9]*"
