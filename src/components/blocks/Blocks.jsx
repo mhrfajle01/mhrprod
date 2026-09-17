@@ -1,9 +1,11 @@
 import React, { useMemo, useEffect, useState } from 'react';
 import { buildTimeline, minutesToLabel, parseTimeToMinutes, shiftSpanMinutes, formatNum } from '../../utils';
 import { recomputeTargets } from '../../targetsUtils';
+import { playSuccessSound, Confetti } from '../../features/animations/Animations';
 
 export default function Blocks({ settings, log, updateLog, isEditing }) {
   const [nowMin, setNowMin] = useState(0);
+  const [showConfetti, setShowConfetti] = useState(false);
 
   useEffect(() => {
     const interval = setInterval(() => {
@@ -83,6 +85,16 @@ export default function Blocks({ settings, log, updateLog, isEditing }) {
       // We allow it to be negative momentarily while they type so the input string exactly matches what they see.
       numVal = numVal - prevSum;
       newActuals[wi] = numVal;
+      // Check for success milestone
+      const prevActual = Number(newActuals[wi] || 0) - numVal; // rough estimate of prev vs new
+      const targetForBlock = log?.blockTargets?.[wi] || 0;
+      
+      if (numVal >= targetForBlock && targetForBlock > 0) {
+        // Did we just cross the threshold? 
+        playSuccessSound();
+        setShowConfetti(true);
+        setTimeout(() => setShowConfetti(false), 3000);
+      }
     }
     
     // Recompute blockTargets when actuals change
@@ -96,6 +108,7 @@ export default function Blocks({ settings, log, updateLog, isEditing }) {
 
   return (
     <div className="panel" id="hoursPanel">
+      <Confetti active={showConfetti} />
       <div className="panel-title" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
         <span>Block by block</span>
         <span id="adaptiveBadge" style={{ fontSize: '0.68rem', color: 'var(--ink-dim)' }}>
