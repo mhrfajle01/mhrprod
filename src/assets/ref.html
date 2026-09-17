@@ -1,0 +1,2016 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Production Hisab</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=IBM+Plex+Mono:wght@400;500;600;700&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<style>
+  :root{
+    --bg:#EFEAE0;
+    --panel:#F8F5EC;
+    --panel-2:#EAE3D3;
+    --ink:#211E1A;
+    --ink-dim:#7A7364;
+    --accent:#B5661F;
+    --accent-ink:#FFFFFF;
+    --good:#3F8656;
+    --bad:#B0503B;
+    --line:rgba(33,30,26,0.16);
+    --track:rgba(33,30,26,0.10);
+    font-family:'Space Grotesk',system-ui,sans-serif;
+    --mono:'IBM Plex Mono',ui-monospace,Menlo,Consolas,monospace;
+  }
+  @media (prefers-color-scheme: dark){
+    :root:not([data-theme="light"]){
+      --bg:#1A1812;
+      --panel:#242019;
+      --panel-2:#2D2921;
+      --ink:#F1ECE1;
+      --ink-dim:#A79E8C;
+      --accent:#E8A33D;
+      --accent-ink:#1A1812;
+      --good:#6FBE8A;
+      --bad:#E38468;
+      --line:rgba(241,236,225,0.14);
+      --track:rgba(241,236,225,0.10);
+    }
+  }
+  :root[data-theme="dark"]{
+    --bg:#1A1812;
+    --panel:#242019;
+    --panel-2:#2D2921;
+    --ink:#F1ECE1;
+    --ink-dim:#A79E8C;
+    --accent:#E8A33D;
+    --accent-ink:#1A1812;
+    --good:#6FBE8A;
+    --bad:#E38468;
+    --line:rgba(241,236,225,0.14);
+    --track:rgba(241,236,225,0.10);
+  }
+
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;}
+  body{
+    background:var(--bg);
+    color:var(--ink);
+    min-height:100vh;
+    padding:28px 16px 60px;
+    -webkit-font-smoothing:antialiased;
+  }
+  .wrap{max-width:660px;margin:0 auto;}
+  a{color:inherit;}
+
+  /* ---------- Header ---------- */
+  .head{
+    display:flex;align-items:baseline;justify-content:space-between;
+    gap:12px;margin-bottom:22px;padding-bottom:14px;
+    border-bottom:1px solid var(--line);
+  }
+  .head h1{font-size:1.35rem;font-weight:700;margin:0;letter-spacing:-0.01em;}
+  .head .clock{
+    font-family:var(--mono);font-variant-numeric:tabular-nums;
+    font-size:0.85rem;color:var(--ink-dim);text-align:right;white-space:nowrap;
+  }
+
+  /* ---------- Panels ---------- */
+  .panel{
+    background:var(--panel);border:1px solid var(--line);border-radius:3px;
+    padding:18px 18px 20px;margin-bottom:16px;
+  }
+  .panel-title{
+    font-size:0.72rem;font-weight:600;color:var(--ink-dim);
+    letter-spacing:0.02em;margin:0 0 14px;
+    display:flex;justify-content:space-between;align-items:center;gap:10px;
+  }
+  .hint{font-size:0.85rem;color:var(--ink-dim);margin:0 0 16px;line-height:1.5;}
+
+  /* ---------- Form ---------- */
+  .field-row{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:12px;}
+  .field-row.single{grid-template-columns:1fr;}
+  .field{display:flex;flex-direction:column;gap:6px;}
+  .field label{font-size:0.72rem;color:var(--ink-dim);font-weight:500;}
+  .field input, .field select{
+    font-family:inherit;font-size:0.95rem;color:var(--ink);
+    background:var(--panel-2);border:1px solid var(--line);border-radius:2px;
+    padding:9px 10px;width:100%;
+  }
+  .field input:focus, .field select:focus{outline:2px solid var(--accent);outline-offset:-1px;}
+  .field input.err{outline:1.5px solid var(--bad);}
+  .field-error{font-size:0.76rem;color:var(--bad);min-height:1em;}
+
+  .btn{
+    font-family:inherit;font-size:0.9rem;font-weight:600;border:none;
+    border-radius:2px;padding:10px 18px;cursor:pointer;
+  }
+  .btn:focus-visible{outline:2px solid var(--ink);outline-offset:2px;}
+  .btn:disabled{opacity:0.4;cursor:not-allowed;}
+  .btn-primary{background:var(--accent);color:var(--accent-ink);}
+  .btn-primary:hover:not(:disabled){filter:brightness(1.06);}
+  .btn-ghost{background:transparent;color:var(--ink-dim);border:1px solid var(--line);}
+  .btn-ghost:hover:not(:disabled){color:var(--ink);border-color:var(--ink-dim);}
+  .btn-small{font-size:0.76rem;padding:4px 10px;font-weight:500;}
+  .btn-row{display:flex;gap:10px;flex-wrap:wrap;align-items:center;}
+
+  /* ---------- Wizard ---------- */
+  .wiz-head{display:flex;align-items:baseline;justify-content:space-between;gap:10px;margin-bottom:10px;}
+  .wiz-title{font-size:1.02rem;font-weight:600;}
+  .wiz-step-label{font-family:var(--mono);font-size:0.72rem;color:var(--ink-dim);}
+  .wiz-dots{display:flex;gap:5px;margin-bottom:16px;}
+  .wiz-dot{height:3px;flex:1;background:var(--track);border-radius:2px;transition:background .2s;}
+  .wiz-dot.done{background:var(--ink-dim);}
+  .wiz-dot.active{background:var(--accent);}
+  .wiz-sub{font-size:0.85rem;color:var(--ink-dim);margin:0 0 14px;line-height:1.5;}
+  .wiz-nav{margin-top:18px;justify-content:space-between;}
+  .wiz-nav .spacer{flex:1;}
+  .wiz-errors{font-size:0.8rem;color:var(--bad);min-height:0;margin-top:10px;}
+
+  .break-edit{
+    display:grid;grid-template-columns:1fr 0.75fr 1fr auto;gap:6px;
+    align-items:center;margin-bottom:8px;
+  }
+  .break-edit input{
+    font-family:var(--mono);font-size:0.85rem;color:var(--ink);
+    background:var(--panel-2);border:1px solid var(--line);border-radius:2px;
+    padding:7px 8px;width:100%;min-width:0;
+  }
+  .break-edit input[data-bf="label"]{font-family:inherit;}
+  .break-edit input:focus{outline:2px solid var(--accent);outline-offset:-1px;}
+
+  .switch{display:flex;align-items:center;gap:12px;padding:12px 0;border-bottom:1px solid var(--line);}
+  .switch:last-of-type{border-bottom:none;}
+  .switch .sw-text{flex:1;}
+  .switch .sw-text b{display:block;font-size:0.88rem;font-weight:600;margin-bottom:3px;}
+  .switch .sw-text span{font-size:0.78rem;color:var(--ink-dim);line-height:1.45;display:block;}
+  .switch input{
+    appearance:none;-webkit-appearance:none;width:40px;height:23px;border-radius:12px;
+    background:var(--track);position:relative;cursor:pointer;flex:none;
+    border:1px solid var(--line);margin:0;transition:background .18s;
+  }
+  .switch input::after{
+    content:'';position:absolute;top:2px;left:2px;width:17px;height:17px;
+    border-radius:50%;background:var(--panel);transition:transform .18s ease;
+    box-shadow:0 1px 2px rgba(0,0,0,0.2);
+  }
+  .switch input:checked{background:var(--accent);}
+  .switch input:checked::after{transform:translateX(17px);background:#fff;}
+
+  /* ---------- Setup summary ---------- */
+  .setup-summary{display:flex;justify-content:space-between;align-items:center;gap:12px;}
+  .setup-summary .desc{font-size:0.88rem;color:var(--ink-dim);line-height:1.5;}
+  .setup-summary .desc b{color:var(--ink);font-weight:600;}
+
+  /* ---------- Readout ---------- */
+  .readout{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:16px;}
+  .stat{text-align:left;}
+  .stat .num{
+    font-family:var(--mono);font-variant-numeric:tabular-nums;
+    font-size:1.9rem;font-weight:600;line-height:1;display:block;
+  }
+  .stat.produced .num{color:var(--ink);}
+  .stat.target .num{color:var(--ink-dim);}
+  .stat.remaining .num{color:var(--accent);}
+  .stat .lbl{font-size:0.7rem;color:var(--ink-dim);margin-top:6px;display:block;}
+  .bar-track{height:10px;background:var(--track);border-radius:5px;overflow:hidden;margin-bottom:8px;}
+  .bar-fill{height:100%;background:var(--accent);border-radius:5px;transition:width 0.35s ease;}
+  .bar-fill.done{background:var(--good);}
+  .bar-caption{
+    display:flex;justify-content:space-between;font-size:0.78rem;
+    color:var(--ink-dim);font-family:var(--mono);font-variant-numeric:tabular-nums;
+  }
+  .pace-line{
+    margin-top:14px;padding-top:12px;border-top:1px solid var(--line);
+    font-size:0.84rem;color:var(--ink-dim);line-height:1.5;
+  }
+  .pace-line.good{color:var(--good);}
+  .pace-line.bad{color:var(--bad);}
+  .pace-line.warn{color:var(--accent);}
+
+  /* ---------- Timer ---------- */
+  .timer-clock{
+    font-family:var(--mono);font-variant-numeric:tabular-nums;
+    font-size:2.6rem;font-weight:600;line-height:1;letter-spacing:-0.02em;
+    margin-bottom:14px;
+  }
+  .timer-clock.idle{color:var(--ink-dim);}
+  .timer-clock.onbreak{color:var(--accent);}
+  .timer-state{
+    font-size:0.7rem;font-weight:600;letter-spacing:0.04em;text-transform:uppercase;
+    color:var(--ink-dim);
+  }
+  .timer-state.running{color:var(--good);}
+  .timer-state.paused{color:var(--accent);}
+  .timer-state.stopped{color:var(--bad);}
+  .timer-meta{
+    display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;
+    padding-top:14px;border-top:1px solid var(--line);margin-bottom:16px;
+  }
+  .timer-meta .tm-num{
+    font-family:var(--mono);font-variant-numeric:tabular-nums;
+    font-size:1rem;font-weight:600;display:block;
+  }
+  .timer-meta .tm-lbl{font-size:0.68rem;color:var(--ink-dim);display:block;margin-top:3px;}
+  #tmEarned{color:var(--good);}
+
+  /* ---------- Hour blocks ---------- */
+  .hour-row{
+    display:grid;grid-template-columns:1.5fr 0.85fr 0.9fr auto;
+    align-items:center;gap:10px;padding:10px 4px 10px 0;
+    border-bottom:1px solid var(--line);border-left:3px solid transparent;
+    padding-left:8px;margin-left:-8px;
+  }
+  .hour-row:last-child{border-bottom:none;}
+  .hour-row.current{border-left-color:var(--accent);background:rgba(181,102,31,0.07);}
+  .hour-row.past .hour-time{color:var(--ink-dim);}
+  .hour-row.is-break{opacity:0.55;border-left-color:transparent;}
+  .hour-row.is-break .hour-time{font-style:italic;color:var(--ink-dim);}
+  .hour-row.locked input{opacity:0.55;}
+  .hour-time{font-size:0.88rem;font-weight:500;}
+  .hour-target{
+    font-family:var(--mono);font-variant-numeric:tabular-nums;
+    font-size:0.8rem;color:var(--ink-dim);
+  }
+  .hour-row input{
+    font-family:var(--mono);font-variant-numeric:tabular-nums;font-size:0.9rem;
+    color:var(--ink);background:var(--panel-2);border:1px solid var(--line);
+    border-radius:2px;padding:7px 8px;width:100%;text-align:right;min-width:0;
+  }
+  .hour-row input:focus{outline:2px solid var(--accent);outline-offset:-1px;}
+  .hour-status{width:8px;height:8px;border-radius:50%;background:var(--track);justify-self:center;}
+  .hour-status.hit{background:var(--good);}
+  .hour-status.miss{background:var(--bad);}
+  .break-name{font-size:0.8rem;color:var(--ink-dim);}
+
+  /* ---------- History ---------- */
+  .history-row{
+    display:flex;justify-content:space-between;align-items:center;gap:10px;
+    padding:10px 0;border-bottom:1px solid var(--line);cursor:pointer;
+  }
+  .history-row:last-child{border-bottom:none;}
+  .history-date{font-size:0.88rem;font-weight:500;}
+  .history-mid{
+    font-family:var(--mono);font-variant-numeric:tabular-nums;
+    font-size:0.8rem;color:var(--ink-dim);text-align:right;
+  }
+  .history-pct{font-weight:600;margin-left:10px;}
+  .history-pct.good{color:var(--good);}
+  .history-pct.bad{color:var(--bad);}
+  .history-detail{
+    padding:4px 0 12px;font-size:0.78rem;color:var(--ink-dim);
+    border-bottom:1px solid var(--line);
+  }
+  .history-detail table{width:100%;border-collapse:collapse;font-family:var(--mono);font-variant-numeric:tabular-nums;}
+  .history-detail td{padding:3px 2px;border-bottom:1px dashed var(--line);}
+  .history-detail tr.brk td{opacity:0.6;font-style:italic;}
+  .history-empty{font-size:0.85rem;color:var(--ink-dim);margin:0;}
+
+  /* ---------- Footer actions ---------- */
+  .actions{display:flex;gap:10px;flex-wrap:wrap;align-items:center;justify-content:space-between;}
+  .export-note{font-size:0.78rem;color:var(--ink-dim);margin:8px 0 0;}
+  .toast{
+    position:fixed;bottom:20px;left:50%;transform:translateX(-50%);
+    background:var(--ink);color:var(--bg);padding:10px 16px;border-radius:3px;
+    font-size:0.85rem;opacity:0;pointer-events:none;max-width:90vw;text-align:center;
+    transition:opacity .25s ease, transform .25s ease;z-index:200;
+  }
+  .toast.show{opacity:1;transform:translateX(-50%) translateY(-4px);}
+
+  .hidden{display:none !important;}
+
+  /* ================= WALLPAPER ================= */
+  :root{
+    --panel-wall: rgba(248,245,236,0.86);
+    --panel-2-wall: rgba(234,227,211,0.74);
+    --line-wall: rgba(33,30,26,0.18);
+  }
+  @media (prefers-color-scheme: dark){
+    :root:not([data-theme="light"]){
+      --panel-wall: rgba(36,32,25,0.84);
+      --panel-2-wall: rgba(45,41,33,0.74);
+      --line-wall: rgba(241,236,225,0.16);
+    }
+  }
+  :root[data-theme="dark"]{
+    --panel-wall: rgba(36,32,25,0.84);
+    --panel-2-wall: rgba(45,41,33,0.74);
+    --line-wall: rgba(241,236,225,0.16);
+  }
+
+  body.has-wallpaper{
+    --panel: var(--panel-wall);
+    --panel-2: var(--panel-2-wall);
+    --line: var(--line-wall);
+    background-image:
+      linear-gradient(rgba(18,16,12,0.30), rgba(18,16,12,0.30)),
+      var(--wallpaper-url);
+    background-size: cover;
+    background-position: center center;
+    background-repeat: no-repeat;
+    background-attachment: fixed;
+  }
+
+  body.has-wallpaper .panel{
+    -webkit-backdrop-filter: blur(10px) saturate(1.12);
+    backdrop-filter: blur(10px) saturate(1.12);
+  }
+
+  body.has-wallpaper .hour-row.current{
+    background: rgba(181,102,31,0.14);
+  }
+
+  /* ================= HEAD TOOLS + LOGIN ================= */
+  .head-tools{
+    display:flex;
+    align-items:center;
+    gap:10px;
+  }
+  #btnLogin.locked{
+    border-color:var(--accent);
+    color:var(--accent);
+  }
+  #btnLogin.unlocked{
+    border-color:var(--good);
+    color:var(--good);
+  }
+
+  .modal-backdrop{
+    position:fixed;
+    inset:0;
+    background:rgba(20,18,14,0.55);
+    -webkit-backdrop-filter:blur(4px);
+    backdrop-filter:blur(4px);
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    padding:20px;
+    z-index:100;
+  }
+  .modal{
+    background:var(--panel);
+    border:1px solid var(--line);
+    border-radius:3px;
+    padding:22px 20px 18px;
+    width:100%;
+    max-width:380px;
+    box-shadow:0 18px 50px rgba(0,0,0,0.28);
+  }
+  .modal .field input{
+    font-family:inherit;
+  }
+
+  /* ================= FOOTER ================= */
+.footer{
+  margin-top:22px;
+  padding:14px 0 6px;
+  border-top:1px solid var(--line);
+  overflow:hidden;
+  -webkit-mask-image:linear-gradient(90deg, transparent, #000 10%, #000 90%, transparent);
+          mask-image:linear-gradient(90deg, transparent, #000 10%, #000 90%, transparent);
+}
+.footer-track{
+  display:flex;
+  width:max-content;
+  animation:footerScroll 22s linear infinite;
+}
+.footer-group{
+  display:flex;
+  align-items:center;
+  gap:26px;
+  padding-right:26px;
+  font-family:var(--mono);
+  font-size:0.75rem;
+  letter-spacing:0.04em;
+  color:var(--ink-dim);
+  white-space:nowrap;
+}
+.footer-group b{color:var(--ink);font-weight:600;}
+.footer-group .sep{
+  width:5px;height:5px;border-radius:50%;
+  background:var(--accent);opacity:0.75;
+  display:inline-block;
+  flex:none;
+}
+.footer:hover .footer-track{animation-play-state:paused;}
+
+@keyframes footerScroll{
+  from{transform:translateX(0);}
+  to{transform:translateX(-50%);}
+}
+
+@media (prefers-reduced-motion: reduce){
+  .footer-track{animation:none;}
+}
+
+  @media (max-width:420px){
+    .readout{grid-template-columns:1fr 1fr 1fr;gap:4px;}
+    .stat .num{font-size:1.5rem;}
+    .hour-row{grid-template-columns:1.25fr 0.75fr 0.8fr auto;gap:7px;}
+    .timer-clock{font-size:2.1rem;}
+    .break-edit{grid-template-columns:1fr 0.7fr auto;}
+    .break-edit input[data-bf="label"]{grid-column:1 / span 2;}
+    .head{gap:8px;}
+    .head h1{font-size:1.15rem;}
+    .head .clock{font-size:0.75rem;}
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <div class="head">
+    <h1>Production Hisab</h1>
+    <div class="head-tools">
+      <div class="clock" id="clockDisplay">—</div>
+      <button class="btn btn-ghost btn-small locked" id="btnLogin">Log in</button>
+    </div>
+  </div>
+
+  <!-- ============ WIZARD ============ -->
+  <div class="panel" id="wizardPanel">
+    <div class="wiz-head">
+      <span class="wiz-title" id="wizTitle">Daily target</span>
+      <span class="wiz-step-label" id="wizStepLabel">Step 1 of 6</span>
+    </div>
+    <div class="wiz-dots" id="wizDots"></div>
+
+    <!-- Step 1 -->
+    <div class="wiz-step" data-step="0">
+      <p class="wiz-sub">How many units are you aiming for today?</p>
+      <div class="field-row single">
+        <div class="field">
+          <label for="inTarget">Target production</label>
+          <input type="number" id="inTarget" min="1" step="1" placeholder="e.g. 2000">
+        </div>
+      </div>
+      <div class="wiz-errors" id="errStep0"></div>
+    </div>
+
+    <!-- Step 2 -->
+    <div class="wiz-step hidden" data-step="1">
+      <p class="wiz-sub">What are you counting? Keep it short — it shows up in the report.</p>
+      <div class="field-row single">
+        <div class="field">
+          <label for="inUnit">Unit</label>
+          <input type="text" id="inUnit" maxlength="12" placeholder="pcs, doc, box…">
+        </div>
+      </div>
+      <div class="wiz-errors" id="errStep1"></div>
+    </div>
+
+    <!-- Step 3 -->
+    <div class="wiz-step hidden" data-step="2">
+      <p class="wiz-sub">The shift window. Overnight shifts are fine — end time can be earlier than start.</p>
+      <div class="field-row">
+        <div class="field">
+          <label for="inStart">Shift starts</label>
+          <input type="time" id="inStart">
+        </div>
+        <div class="field">
+          <label for="inEnd">Shift ends</label>
+          <input type="time" id="inEnd">
+        </div>
+      </div>
+      <div class="wiz-errors" id="errStep2"></div>
+    </div>
+
+    <!-- Step 4 -->
+    <div class="wiz-step hidden" data-step="3">
+      <p class="wiz-sub">Smaller blocks give you faster feedback. 60 minutes suits most shifts.</p>
+      <div class="field-row single">
+        <div class="field">
+          <label for="inBlock">Track in blocks of</label>
+          <select id="inBlock">
+            <option value="60">60 minutes</option>
+            <option value="30">30 minutes</option>
+          </select>
+        </div>
+      </div>
+    </div>
+
+    <!-- Step 5 -->
+    <div class="wiz-step hidden" data-step="4">
+      <p class="wiz-sub">Scheduled breaks are cut out of the target math entirely — they show as grey slots, not production slots.</p>
+      <div id="breakList"></div>
+      <button class="btn btn-ghost btn-small" id="btnAddBreak" type="button">+ Add a break</button>
+      <div class="wiz-errors" id="errStep4"></div>
+    </div>
+
+    <!-- Step 6 -->
+    <div class="wiz-step hidden" data-step="5">
+      <p class="wiz-sub">Optional pacing helpers. You can change these any time.</p>
+      <label class="switch">
+        <span class="sw-text">
+          <b>Adaptive block targets</b>
+          <span>Recompute each remaining block's target from what's actually left, so an overshoot buys breathing room later.</span>
+        </span>
+        <input type="checkbox" id="inAdaptive" checked>
+      </label>
+      <label class="switch">
+        <span class="sw-text">
+          <b>Convert surplus into earned break</b>
+          <span>Overproduction gets converted into real break minutes at your current rate. Take them with the break button.</span>
+        </span>
+        <input type="checkbox" id="inEarnBreak" checked>
+      </label>
+    </div>
+
+    <!-- Step 7 (owner-only) -->
+    <div class="wiz-step hidden" data-step="6">
+      <p class="wiz-sub">Paste a direct image link to use as your background. Leave it empty for the plain look.</p>
+      <div class="field-row single">
+        <div class="field">
+          <label for="inWallpaper">Wallpaper image URL</label>
+          <input type="url" id="inWallpaper" placeholder="https://example.com/photo.jpg" autocomplete="off" spellcheck="false">
+        </div>
+      </div>
+      <div class="btn-row" style="margin-top:2px;">
+        <button class="btn btn-ghost btn-small" id="btnWallpaperClear" type="button">Clear wallpaper</button>
+      </div>
+      <div class="wiz-errors" id="errStep6"></div>
+    </div>
+
+    <div class="btn-row wiz-nav">
+      <button class="btn btn-ghost" id="wizBack">Back</button>
+      <span class="spacer"></span>
+      <button class="btn btn-ghost hidden" id="wizCancel">Cancel</button>
+      <button class="btn btn-primary" id="wizNext">Next</button>
+    </div>
+  </div>
+
+  <!-- ============ SETUP SUMMARY ============ -->
+  <div class="panel hidden" id="setupSummary">
+    <div class="setup-summary">
+      <div class="desc" id="setupDesc"></div>
+      <button class="btn btn-ghost" id="btnEditSetup">Edit</button>
+    </div>
+  </div>
+
+  <!-- ============ TIMER ============ -->
+  <div class="panel hidden" id="timerPanel">
+    <p class="panel-title">
+      <span>Shift clock</span>
+      <span class="timer-state" id="timerState">Not started</span>
+    </p>
+    <div class="timer-clock idle" id="timerClock">0:00:00</div>
+    <div class="timer-meta">
+      <div><span class="tm-num" id="tmProd">0:00</span><span class="tm-lbl">production time</span></div>
+      <div><span class="tm-num" id="tmBreak">0:00</span><span class="tm-lbl">break taken</span></div>
+      <div><span class="tm-num" id="tmEarned">0:00</span><span class="tm-lbl">break earned</span></div>
+    </div>
+    <div class="btn-row" id="timerButtons">
+      <button class="btn btn-primary" id="btnStart">Start shift</button>
+      <button class="btn btn-ghost hidden" id="btnPause">Pause</button>
+      <button class="btn btn-ghost hidden" id="btnResume">Resume</button>
+      <button class="btn btn-ghost hidden" id="btnStop">Stop</button>
+      <button class="btn btn-ghost hidden" id="btnReopen">Reopen</button>
+      <button class="btn btn-ghost hidden" id="btnBreak">Take break</button>
+    </div>
+  </div>
+
+  <!-- ============ READOUT ============ -->
+  <div class="panel hidden" id="readoutPanel">
+    <p class="panel-title">Today's progress</p>
+    <div class="readout">
+      <div class="stat produced"><span class="num" id="numProduced">0</span><span class="lbl">Produced</span></div>
+      <div class="stat target"><span class="num" id="numTarget">0</span><span class="lbl">Target</span></div>
+      <div class="stat remaining"><span class="num" id="numRemaining">0</span><span class="lbl">Remaining</span></div>
+    </div>
+    <div class="bar-track"><div class="bar-fill" id="barFill" style="width:0%"></div></div>
+    <div class="bar-caption">
+      <span id="pctLabel">0% of target</span>
+      <span id="unitLabel"></span>
+    </div>
+    <div class="pace-line" id="paceLine"></div>
+  </div>
+
+  <!-- ============ BLOCKS ============ -->
+  <div class="panel hidden" id="hoursPanel">
+    <p class="panel-title">
+      <span>Block by block</span>
+      <span id="adaptiveBadge"></span>
+    </p>
+    <div id="hourList"></div>
+  </div>
+
+  <!-- ============ ACTIONS ============ -->
+  <div class="panel hidden" id="actionsPanel">
+    <div class="actions">
+      <button class="btn btn-primary" id="btnExport">Export today (.xlsx)</button>
+      <button class="btn btn-ghost" id="btnReset">Reset day</button>
+    </div>
+    <p class="export-note" id="resetNote"></p>
+  </div>
+
+  <!-- ============ HISTORY ============ -->
+  <div class="panel hidden" id="historyPanel">
+    <p class="panel-title">
+      <span>History</span>
+      <button class="btn btn-ghost btn-small" id="btnExportHistory">Export history (.xlsx)</button>
+    </p>
+    <div id="historyList"></div>
+  </div>
+<!-- ============ FOOTER ============ -->
+<footer class="footer" aria-label="Credits">
+  <div class="footer-track">
+    <div class="footer-group">
+      <span>Created by <b>Md Fajle Rabby</b></span>
+      <span class="sep"></span>
+      <span>Mobile: <b>01310447803</b></span>
+      <span class="sep"></span>
+    </div>
+    <div class="footer-group" aria-hidden="true">
+      <span>Created by <b>Md Fajle Rabby</b></span>
+      <span class="sep"></span>
+      <span>Mobile: <b>01310447803</b></span>
+      <span class="sep"></span>
+    </div>
+  </div>
+</footer>
+</div>
+
+<!-- ============ LOGIN MODAL ============ -->
+<div class="modal-backdrop hidden" id="loginModal">
+  <div class="modal">
+    <p class="panel-title">Owner access</p>
+    <p class="hint" style="margin-bottom:14px;">Wallpaper settings are restricted. Sign in to unlock.</p>
+    <div class="field-row single">
+      <div class="field">
+        <label for="inLoginUser">Username</label>
+        <input type="text" id="inLoginUser" autocomplete="username" spellcheck="false" autocapitalize="off">
+      </div>
+    </div>
+    <div class="field-row single">
+      <div class="field">
+        <label for="inLoginPass">Password</label>
+        <input type="password" id="inLoginPass" autocomplete="current-password">
+      </div>
+    </div>
+    <div class="wiz-errors" id="loginError"></div>
+    <div class="btn-row" style="justify-content:flex-end; margin-top:6px;">
+      <button class="btn btn-ghost" id="btnLoginCancel" type="button">Cancel</button>
+      <button class="btn btn-primary" id="btnLoginSubmit" type="button">Sign in</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<script>
+(function(){
+  "use strict";
+
+  var LS_SETTINGS = "ph_settings_v2";
+  var LS_LOG_PREFIX = "ph_log_v3_";
+
+  var WIZ_STEPS = [
+    { title: 'Daily target' },
+    { title: 'Unit' },
+    { title: 'Shift hours' },
+    { title: 'Blocks' },
+    { title: 'Breaks' },
+    { title: 'Smart pacing' },
+    { title: 'Background' }
+  ];
+
+  var els = {};
+  [
+    'clockDisplay','wizardPanel','wizTitle','wizStepLabel','wizDots','wizBack','wizNext','wizCancel',
+    'inTarget','inUnit','inStart','inEnd','inBlock','inAdaptive','inEarnBreak',
+    'breakList','btnAddBreak','errStep0','errStep1','errStep2','errStep4','errStep6',
+    'inWallpaper','btnWallpaperClear',
+    'setupSummary','setupDesc','btnEditSetup',
+    'timerPanel','timerClock','timerState','tmProd','tmBreak','tmEarned',
+    'btnStart','btnPause','btnResume','btnStop','btnReopen','btnBreak','timerButtons',
+    'readoutPanel','numProduced','numTarget','numRemaining','barFill','pctLabel','unitLabel','paceLine',
+    'hoursPanel','hourList','adaptiveBadge',
+    'actionsPanel','btnExport','btnReset','resetNote',
+    'historyPanel','historyList','btnExportHistory','toast',
+    'btnLogin','loginModal','inLoginUser','inLoginPass','loginError','btnLoginCancel','btnLoginSubmit'
+  ].forEach(function(id){ els[id] = document.getElementById(id); });
+
+  var state = { settings: null, log: null, slots: [] };
+  var wizIndex = 0;
+  var wizBreaks = [];
+  var wizEditing = false;
+  var wizOriginalWallpaper = '';
+  var wallpaperPreviewTimer = null;
+  var resetArmed = false;
+  var expandedHistoryDate = null;
+  var lastCurrentSlot = -2;
+
+  var OWNER_USER = 'mhrfazle';
+  var OWNER_PASS = 'Ayesha@03';
+  var LS_AUTH = 'ph_auth_session';
+
+  /* ================= auth ================= */
+
+  function isAuthed(){
+    try{ return sessionStorage.getItem(LS_AUTH) === '1'; }catch(e){ return false; }
+  }
+  function setAuthed(v){
+    try{
+      if(v) sessionStorage.setItem(LS_AUTH, '1');
+      else sessionStorage.removeItem(LS_AUTH);
+    }catch(e){}
+  }
+  function visibleStepList(){
+    var arr = [0,1,2,3,4,5];
+    if(isAuthed()) arr.push(6);
+    return arr;
+  }
+
+  /* ================= storage ================= */
+
+  function todayKey(){
+    var d = new Date();
+    return d.getFullYear() + '-' + String(d.getMonth()+1).padStart(2,'0') + '-' + String(d.getDate()).padStart(2,'0');
+  }
+  function loadSettings(){
+    try{ var raw = localStorage.getItem(LS_SETTINGS); return raw ? JSON.parse(raw) : null; }catch(e){ return null; }
+  }
+  function saveSettings(s){
+    try{ localStorage.setItem(LS_SETTINGS, JSON.stringify(s)); }catch(e){}
+  }
+  function loadLog(key){
+    try{ var raw = localStorage.getItem(LS_LOG_PREFIX + key); return raw ? JSON.parse(raw) : null; }catch(e){ return null; }
+  }
+  function saveLog(key, log){
+    try{ localStorage.setItem(LS_LOG_PREFIX + key, JSON.stringify(log)); }catch(e){}
+  }
+  function getAllLogs(){
+    var out = [];
+    try{
+      for(var i=0;i<localStorage.length;i++){
+        var k = localStorage.key(i);
+        if(k && k.indexOf(LS_LOG_PREFIX) === 0){
+          try{
+            var log = JSON.parse(localStorage.getItem(k));
+            if(log && log.date && log.actuals) out.push(log);
+          }catch(e){}
+        }
+      }
+    }catch(e){}
+    out.sort(function(a,b){ return a.date < b.date ? 1 : (a.date > b.date ? -1 : 0); });
+    return out;
+  }
+
+  /* ================= helpers ================= */
+
+  function showToast(msg){
+    els.toast.textContent = msg;
+    els.toast.classList.add('show');
+    clearTimeout(showToast._t);
+    showToast._t = setTimeout(function(){ els.toast.classList.remove('show'); }, 2600);
+  }
+
+  function escapeHtml(str){
+    return String(str == null ? '' : str).replace(/[&<>"']/g, function(c){
+      return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];
+    });
+  }
+
+  function tickClock(){
+    var d = new Date();
+    var dateStr = d.toLocaleDateString(undefined, { weekday:'short', month:'short', day:'numeric' });
+    var timeStr = d.toLocaleTimeString(undefined, { hour:'2-digit', minute:'2-digit' });
+    els.clockDisplay.textContent = dateStr + '  ·  ' + timeStr;
+  }
+
+  function parseTimeToMinutes(t){
+    if(!t) return null;
+    var parts = String(t).split(':');
+    if(parts.length !== 2) return null;
+    var h = parseInt(parts[0],10), m = parseInt(parts[1],10);
+    if(isNaN(h) || isNaN(m)) return null;
+    return h*60+m;
+  }
+
+  function minutesToLabel(mins){
+    var m = ((Math.round(mins) % 1440) + 1440) % 1440;
+    var h = Math.floor(m/60);
+    var mm = m % 60;
+    var suffix = h >= 12 ? 'PM' : 'AM';
+    var h12 = h % 12; if(h12 === 0) h12 = 12;
+    return h12 + ':' + String(mm).padStart(2,'0') + ' ' + suffix;
+  }
+
+  function formatNum(v){
+    if(v === null || v === undefined || v === '') return '';
+    var r = Math.round(Number(v) * 100) / 100;
+    if(Number.isNaN(r)) return '';
+    return r.toLocaleString(undefined, { maximumFractionDigits: 2 });
+  }
+
+  function fmtDuration(ms){
+    var total = Math.max(0, Math.floor(ms/1000));
+    var h = Math.floor(total/3600);
+    var m = Math.floor((total%3600)/60);
+    var s = total%60;
+    return h + ':' + String(m).padStart(2,'0') + ':' + String(s).padStart(2,'0');
+  }
+
+  function fmtMinShort(minutes){
+    var m = Math.max(0, Math.round(minutes));
+    if(m < 60) return m + ' min';
+    var h = Math.floor(m/60);
+    var r = m % 60;
+    return h + 'h' + (r ? ' ' + String(r).padStart(2,'0') + 'm' : '');
+  }
+
+  function shiftSpanMinutes(s){
+    var a = parseTimeToMinutes(s.start), b = parseTimeToMinutes(s.end);
+    var span = (b - a + 1440) % 1440;
+    return span === 0 ? 1440 : span;
+  }
+
+  /* ================= wallpaper ================= */
+
+  function applyWallpaper(url){
+    var clean = (url || '').trim();
+    if(!clean){
+      document.body.style.removeProperty('--wallpaper-url');
+      document.body.classList.remove('has-wallpaper');
+      return;
+    }
+    var probe = new Image();
+    probe.onload = function(){
+      document.body.style.setProperty('--wallpaper-url', 'url("' + clean.replace(/"/g, '\\"') + '")');
+      document.body.classList.add('has-wallpaper');
+    };
+    probe.onerror = function(){
+      document.body.classList.remove('has-wallpaper');
+      document.body.style.removeProperty('--wallpaper-url');
+      showToast('Could not load that image.');
+    };
+    probe.src = clean;
+  }
+
+  /* ================= timeline ================= */
+
+  function buildTimeline(s){
+    var startMin = parseTimeToMinutes(s.start);
+    var span = shiftSpanMinutes(s);
+    var blockLen = s.blockMinutes === 30 ? 30 : 60;
+
+    var raw = (s.breaks || []).map(function(b){
+      return {
+        offset: (((parseTimeToMinutes(b.start) - startMin) % 1440) + 1440) % 1440,
+        minutes: Math.max(0, Math.round(Number(b.minutes) || 0)),
+        label: (b.label || 'Break').trim() || 'Break'
+      };
+    }).filter(function(b){ return b.minutes > 0 && b.offset > 0 && b.offset < span; })
+      .sort(function(a,b){ return a.offset - b.offset; });
+
+    var segs = [];
+    var cursor = 0;
+    raw.forEach(function(b){
+      var from = Math.max(b.offset, cursor);
+      var to = Math.min(from + b.minutes, span);
+      if(to <= from) return;
+      if(from > cursor) segs.push({ type:'work', from:cursor, to:from });
+      segs.push({ type:'break', from:from, to:to, label:b.label });
+      cursor = to;
+    });
+    if(cursor < span) segs.push({ type:'work', from:cursor, to:span });
+
+    var slots = [];
+    var workIndex = 0;
+
+    segs.forEach(function(seg){
+      if(seg.type === 'break'){
+        slots.push({
+          type:'break', label: seg.label,
+          offset: seg.from, minutes: seg.to - seg.from,
+          startMin: startMin + seg.from, endMin: startMin + seg.to
+        });
+        return;
+      }
+      var chunks = [];
+      var cur = seg.from;
+      while(cur < seg.to){
+        var next = Math.min(cur + blockLen, seg.to);
+        chunks.push([cur, next]);
+        cur = next;
+      }
+      if(chunks.length >= 2){
+        var last = chunks[chunks.length-1];
+        if(last[1] - last[0] < 20){
+          chunks[chunks.length-2][1] = last[1];
+          chunks.pop();
+        }
+      }
+      chunks.forEach(function(c){
+        slots.push({
+          type:'work', workIndex: workIndex++,
+          offset: c[0], minutes: c[1] - c[0],
+          startMin: startMin + c[0], endMin: startMin + c[1]
+        });
+      });
+    });
+
+    return slots;
+  }
+
+  function workSlots(){ return state.slots.filter(function(s){ return s.type === 'work'; }); }
+
+  function slotSignature(slots){
+    return slots.map(function(s){ return (s.type === 'break' ? 'B' : 'W') + s.minutes; }).join(',');
+  }
+
+  function slotLabel(slot){
+    return minutesToLabel(slot.startMin) + ' – ' + minutesToLabel(slot.endMin);
+  }
+
+  function currentOffsetInShift(){
+    if(!state.settings) return null;
+    var startMin = parseTimeToMinutes(state.settings.start);
+    var span = shiftSpanMinutes(state.settings);
+    var d = new Date();
+    var nowMin = d.getHours()*60 + d.getMinutes() + d.getSeconds()/60;
+    var off = (((nowMin - startMin) % 1440) + 1440) % 1440;
+    return off < span ? off : null;
+  }
+
+  function currentSlotIndex(){
+    var off = currentOffsetInShift();
+    if(off === null) return -1;
+    for(var i=0;i<state.slots.length;i++){
+      var s = state.slots[i];
+      if(off >= s.offset && off < s.offset + s.minutes) return i;
+    }
+    return -1;
+  }
+
+  /* ================= targets ================= */
+
+  function baseTargets(){
+    var ws = workSlots();
+    var totalMin = ws.reduce(function(a,s){ return a + s.minutes; }, 0) || 1;
+    var target = state.settings ? state.settings.target : 0;
+    return ws.map(function(s){ return target * s.minutes / totalMin; });
+  }
+
+  function recomputeTargets(){
+    var log = state.log;
+    var ws = workSlots();
+    var base = baseTargets();
+
+    if(!state.settings.adaptive){
+      for(var i=0;i<ws.length;i++){
+        if(log.actuals[i] === null || log.actuals[i] === undefined) log.blockTargets[i] = base[i];
+      }
+      return;
+    }
+
+    var produced = 0;
+    var unlogged = [];
+    for(var j=0;j<ws.length;j++){
+      var a = log.actuals[j];
+      if(a === null || a === undefined) unlogged.push(j);
+      else produced += Number(a) || 0;
+    }
+    var pool = Math.max(0, state.settings.target - produced);
+    var remainingMin = unlogged.reduce(function(sum,i){ return sum + ws[i].minutes; }, 0) || 1;
+    unlogged.forEach(function(i){
+      log.blockTargets[i] = pool * ws[i].minutes / remainingMin;
+    });
+  }
+
+  function sumActuals(){
+    if(!state.log) return 0;
+    return state.log.actuals.reduce(function(sum,v){
+      return sum + (v === null || v === undefined ? 0 : (Number(v) || 0));
+    }, 0);
+  }
+
+  /* ================= timer ================= */
+
+  function newTimer(){
+    return {
+      status:'idle',            // idle | running | paused | stopped
+      accumulatedMs:0,
+      segmentStart:null,
+      breakAccumMs:0,
+      breakSegmentStart:null,
+      autoBreak:false,
+      startedAt:null,
+      stoppedAt:null
+    };
+  }
+
+  function elapsedMs(t){
+    var base = t.accumulatedMs || 0;
+    if(t.status === 'running' && t.segmentStart) base += Date.now() - t.segmentStart;
+    return base;
+  }
+  function breakMs(t){
+    var base = t.breakAccumMs || 0;
+    if(t.breakSegmentStart) base += Date.now() - t.breakSegmentStart;
+    return base;
+  }
+  function prodMs(t){
+    return Math.max(0, elapsedMs(t) - breakMs(t));
+  }
+  function onBreak(t){ return !!t.breakSegmentStart; }
+
+  function startShift(){
+    var t = state.log.timer;
+    if(t.status === 'running') return;
+    t.startedAt = t.startedAt || Date.now();
+    t.segmentStart = Date.now();
+    t.status = 'running';
+    persistAndRefresh();
+    showToast('Shift clock started.');
+  }
+
+  function pauseShift(){
+    var t = state.log.timer;
+    if(t.status !== 'running') return;
+    if(t.breakSegmentStart) endBreak();
+    t.accumulatedMs = elapsedMs(t);
+    t.segmentStart = null;
+    t.status = 'paused';
+    persistAndRefresh();
+    showToast('Paused. Paused time doesn\'t count.');
+  }
+
+  function resumeShift(){
+    var t = state.log.timer;
+    if(t.status !== 'paused') return;
+    t.segmentStart = Date.now();
+    t.status = 'running';
+    persistAndRefresh();
+  }
+
+  function stopShift(){
+    var t = state.log.timer;
+    if(t.status === 'stopped') return;
+    if(t.breakSegmentStart) endBreak();
+    if(t.status === 'running') t.accumulatedMs = elapsedMs(t);
+    t.segmentStart = null;
+    t.status = 'stopped';
+    t.stoppedAt = Date.now();
+    persistAndRefresh();
+    showToast('Shift closed. Entries locked.');
+  }
+
+  function reopenShift(){
+    var t = state.log.timer;
+    if(t.status !== 'stopped') return;
+    t.status = 'paused';
+    t.stoppedAt = null;
+    persistAndRefresh();
+    showToast('Shift reopened.');
+  }
+
+  function startBreak(label, auto){
+    var t = state.log.timer;
+    if(t.status !== 'running' || t.breakSegmentStart) return;
+    t.breakSegmentStart = Date.now();
+    t.autoBreak = !!auto;
+    if(auto) t.breakLabel = label || 'Scheduled break';
+    persistAndRefresh();
+  }
+
+  function endBreak(){
+    var t = state.log.timer;
+    if(!t.breakSegmentStart) return;
+    var startMs = t.breakSegmentStart;
+    t.breakAccumMs = breakMs(t);
+    t.breakSegmentStart = null;
+    var mins = (Date.now() - startMs) / 60000;
+    if(mins >= 0.2){
+      if(!state.log.breaksTaken) state.log.breaksTaken = [];
+      state.log.breaksTaken.push({
+        kind: t.autoBreak ? 'scheduled' : 'manual',
+        label: t.autoBreak ? (t.breakLabel || 'Scheduled break') : 'Break',
+        start: new Date(startMs).toISOString(),
+        minutes: Math.round(mins * 100) / 100
+      });
+    }
+    t.autoBreak = false;
+    t.breakLabel = null;
+    persistAndRefresh();
+  }
+
+  function checkAutoBreak(){
+    var t = state.log.timer;
+    if(t.status !== 'running') return false;
+    var off = currentOffsetInShift();
+    var inScheduled = null;
+    if(off !== null){
+      for(var i=0;i<state.slots.length;i++){
+        var s = state.slots[i];
+        if(s.type === 'break' && off >= s.offset && off < s.offset + s.minutes){ inScheduled = s; break; }
+      }
+    }
+    if(inScheduled && !t.breakSegmentStart){
+      startBreak(inScheduled.label, true);
+      return true;
+    }
+    if(!inScheduled && t.breakSegmentStart && t.autoBreak){
+      endBreak();
+      return true;
+    }
+    return false;
+  }
+
+  /* ================= pace ================= */
+
+  function computePace(){
+    var t = state.log.timer;
+    var pMs = prodMs(t);
+    var pMin = pMs / 60000;
+    var ws = workSlots();
+    var totalMin = ws.reduce(function(a,s){ return a + s.minutes; }, 0) || 1;
+    var produced = sumActuals();
+    var plannedRate = state.settings.target / totalMin;
+    var expected = plannedRate * Math.min(pMin, totalMin);
+    var surplus = produced - expected;
+    var actualRate = pMin > 0.5 ? produced / pMin : 0;
+    var earnedMin = (surplus > 0 && actualRate > 0) ? surplus / actualRate : 0;
+    var takenMin = breakMs(t) / 60000;
+    return {
+      prodMin: pMin,
+      produced: produced,
+      expected: expected,
+      surplus: surplus,
+      actualRate: actualRate,
+      plannedRate: plannedRate,
+      earnedMin: earnedMin,
+      takenMin: takenMin,
+      availableMin: earnedMin - takenMin,
+      aheadPct: expected > 0 ? ((produced - expected) / expected) * 100 : 0
+    };
+  }
+
+  /* ================= log lifecycle ================= */
+
+  function ensureTodayLog(){
+    var key = todayKey();
+    var s = state.settings;
+    state.slots = buildTimeline(s);
+    var sig = slotSignature(state.slots);
+    var ws = workSlots();
+    var workCount = ws.length;
+    var existing = loadLog(key);
+
+    if(existing && existing.sig === sig && existing.actuals && existing.actuals.length === workCount){
+      state.log = existing;
+      state.log.unit = s.unit;
+      state.log.target = s.target;
+      state.log.shiftStart = s.start;
+      state.log.shiftEnd = s.end;
+      state.log.blockMinutes = s.blockMinutes;
+      state.log.breaks = s.breaks;
+      state.log.adaptive = !!s.adaptive;
+      state.log.earnBreak = !!s.earnBreak;
+      if(!state.log.timer) state.log.timer = newTimer();
+      if(!state.log.breaksTaken) state.log.breaksTaken = [];
+      if(!state.log.blockTargets || state.log.blockTargets.length !== workCount){
+        state.log.blockTargets = baseTargets();
+      }
+    } else {
+      var actuals = new Array(workCount);
+      for(var i=0;i<workCount;i++){
+        actuals[i] = (existing && existing.actuals && i < existing.actuals.length) ? existing.actuals[i] : null;
+      }
+      state.log = {
+        date: key,
+        sig: sig,
+        unit: s.unit,
+        target: s.target,
+        shiftStart: s.start,
+        shiftEnd: s.end,
+        blockMinutes: s.blockMinutes,
+        breaks: s.breaks,
+        adaptive: !!s.adaptive,
+        earnBreak: !!s.earnBreak,
+        actuals: actuals,
+        blockTargets: baseTargets(),
+        timer: (existing && existing.timer) ? existing.timer : newTimer(),
+        breaksTaken: (existing && existing.breaksTaken) ? existing.breaksTaken : []
+      };
+    }
+    recomputeTargets();
+    saveLog(key, state.log);
+  }
+
+  function persistAndRefresh(){
+    if(!state.log) return;
+    saveLog(state.log.date, state.log);
+    renderTimer();
+    renderHoursState();
+    renderReadout();
+    renderPace();
+  }
+
+  /* ================= rendering ================= */
+
+  function statusFor(actual, target){
+    if(actual === null || actual === undefined || actual === '') return '';
+    return Number(actual) >= target ? 'hit' : 'miss';
+  }
+
+  function renderTimer(){
+    var t = state.log.timer;
+    var running = t.status === 'running';
+    var paused = t.status === 'paused';
+    var stopped = t.status === 'stopped';
+    var idle = t.status === 'idle';
+    var brk = onBreak(t);
+
+    els.timerClock.textContent = fmtDuration(elapsedMs(t));
+    els.timerClock.className = 'timer-clock' + (brk ? ' onbreak' : (idle ? ' idle' : ''));
+
+    var stateLabel = idle ? 'Not started'
+      : stopped ? 'Closed'
+      : paused ? 'Paused'
+      : brk ? 'On break' : 'Running';
+    els.timerState.textContent = stateLabel;
+    els.timerState.className = 'timer-state ' + (brk ? 'paused' : t.status);
+
+    els.tmProd.textContent = fmtDuration(prodMs(t));
+
+    var takenMs = breakMs(t);
+    els.tmBreak.textContent = fmtDuration(takenMs);
+
+    var pace = computePace();
+    els.tmEarned.textContent = state.settings.earnBreak ? fmtMinShort(pace.earnedMin) : '—';
+
+    els.btnStart.classList.toggle('hidden', !idle);
+    els.btnPause.classList.toggle('hidden', !running || brk);
+    els.btnResume.classList.toggle('hidden', !paused);
+    els.btnStop.classList.toggle('hidden', idle || stopped);
+    els.btnReopen.classList.toggle('hidden', !stopped);
+    els.btnBreak.classList.toggle('hidden', !running);
+
+    if(running){
+      if(brk){
+        var bm = (Date.now() - t.breakSegmentStart) / 1000;
+        els.btnBreak.textContent = 'End break · ' + Math.floor(bm/60) + ':' + String(Math.floor(bm%60)).padStart(2,'0');
+      } else if(state.settings.earnBreak && pace.availableMin >= 1){
+        els.btnBreak.textContent = 'Take ' + fmtMinShort(pace.availableMin) + ' earned break';
+      } else {
+        els.btnBreak.textContent = 'Take break';
+      }
+    }
+    if(brk) els.btnPause.classList.add('hidden');
+  }
+
+  function renderHours(){
+    var html = '';
+    var nowSlot = currentSlotIndex();
+    var locked = state.log.timer.status === 'stopped';
+
+    state.slots.forEach(function(slot, si){
+      if(slot.type === 'break'){
+        html += '<div class="hour-row is-break">' +
+          '<div class="hour-time">' + escapeHtml(slotLabel(slot)) + '</div>' +
+          '<div class="hour-target">' + slot.minutes + ' min</div>' +
+          '<div class="break-name">' + escapeHtml(slot.label) + '</div>' +
+          '<div class="hour-status"></div>' +
+        '</div>';
+        return;
+      }
+      var wi = slot.workIndex;
+      var actual = state.log.actuals[wi];
+      var tgt = state.log.blockTargets[wi];
+      var status = statusFor(actual, tgt);
+      var cls = 'hour-row';
+      if(nowSlot === si) cls += ' current';
+      else if(nowSlot > si && nowSlot >= 0) cls += ' past';
+      if(locked) cls += ' locked';
+      html += '<div class="' + cls + '" data-row="' + wi + '">' +
+        '<div class="hour-time">' + escapeHtml(slotLabel(slot)) + '</div>' +
+        '<div class="hour-target" data-target-for="' + wi + '">target ' + formatNum(tgt) + '</div>' +
+        '<input type="number" inputmode="decimal" min="0" step="any" data-idx="' + wi + '" placeholder="actual" ' +
+          'value="' + (actual === null || actual === undefined ? '' : actual) + '"' + (locked ? ' disabled' : '') + '>' +
+        '<div class="hour-status ' + status + '" data-status-idx="' + wi + '"></div>' +
+      '</div>';
+    });
+
+    els.hourList.innerHTML = html;
+
+    Array.prototype.forEach.call(els.hourList.querySelectorAll('input'), function(inp){
+      inp.addEventListener('input', function(){
+        var idx = parseInt(inp.getAttribute('data-idx'), 10);
+        var v = inp.value;
+        state.log.actuals[idx] = (v === '') ? null : Math.max(0, parseFloat(v));
+        if(state.log.actuals[idx] !== null && Number.isNaN(state.log.actuals[idx])) state.log.actuals[idx] = null;
+        recomputeTargets();
+        saveLog(state.log.date, state.log);
+        updateStatusDot(idx);
+        refreshTargetLabels();
+        renderReadout();
+        renderPace();
+      });
+      inp.addEventListener('blur', function(){
+        persistAndRefresh();
+      });
+    });
+  }
+
+  function renderHoursState(){
+    var locked = state.log.timer.status === 'stopped';
+    var nowSlot = currentSlotIndex();
+    if(nowSlot === lastCurrentSlot && els.hourList.querySelectorAll('.hour-row').length === state.slots.length){
+      var rows = els.hourList.querySelectorAll('.hour-row');
+      for(var i=0;i<rows.length;i++){
+        rows[i].classList.toggle('current', i === nowSlot);
+        rows[i].classList.remove('past');
+        if(nowSlot > i && nowSlot >= 0) rows[i].classList.add('past');
+        rows[i].classList.toggle('locked', locked);
+        var inp = rows[i].querySelector('input');
+        if(inp) inp.disabled = locked;
+      }
+      return;
+    }
+    lastCurrentSlot = nowSlot;
+    renderHours();
+  }
+
+  function updateStatusDot(idx){
+    var dot = els.hourList.querySelector('[data-status-idx="' + idx + '"]');
+    if(!dot) return;
+    var tgt = state.log.blockTargets[idx];
+    var actual = state.log.actuals[idx];
+    dot.className = 'hour-status ' + statusFor(actual, tgt);
+  }
+
+  function refreshTargetLabels(){
+    state.log.blockTargets.forEach(function(t, wi){
+      var el = els.hourList.querySelector('[data-target-for="' + wi + '"]');
+      if(el) el.textContent = 'target ' + formatNum(t);
+    });
+    els.adaptiveBadge.textContent = state.settings.adaptive ? 'adaptive' : '';
+    els.adaptiveBadge.style.fontSize = '0.68rem';
+    els.adaptiveBadge.style.color = 'var(--ink-dim)';
+  }
+
+  function renderReadout(){
+    var produced = sumActuals();
+    var target = state.settings.target;
+    var remaining = Math.max(0, target - produced);
+    var pct = target > 0 ? Math.min(100, (produced/target)*100) : 0;
+
+    els.numProduced.textContent = formatNum(produced);
+    els.numTarget.textContent = formatNum(target);
+    els.numRemaining.textContent = formatNum(remaining);
+    els.unitLabel.textContent = state.settings.unit;
+    els.pctLabel.textContent = Math.round(pct) + '% of target';
+    els.barFill.style.width = pct + '%';
+    els.barFill.classList.toggle('done', pct >= 100);
+  }
+
+  function renderPace(){
+    var t = state.log.timer;
+    if(t.status === 'idle'){
+      els.paceLine.className = 'pace-line';
+      els.paceLine.textContent = 'Start the shift clock to track pace and earned break.';
+      return;
+    }
+    var p = computePace();
+    var parts = [];
+    var ahead = p.aheadPct;
+
+    if(onBreak(t)) parts.push('On break — the clock keeps running, production time doesn\'t.');
+    else if(p.prodMin < 1) parts.push('Clock running. Log a block to see pace.');
+    else if(Math.abs(ahead) < 2) parts.push('Right on pace.');
+    else if(ahead > 0) parts.push('Ahead of pace by ' + Math.round(ahead) + '%.');
+    else parts.push('Behind pace by ' + Math.round(-ahead) + '%.');
+
+    if(state.settings.earnBreak && p.prodMin >= 1){
+      if(p.availableMin >= 1) parts.push(fmtMinShort(p.availableMin) + ' of break earned and ready.');
+      else if(p.earnedMin >= 1) parts.push(fmtMinShort(p.earnedMin) + ' earned so far, all used.');
+      else if(p.surplus < 0) parts.push(fmtMinShort(-p.surplus / (p.plannedRate || 1)) + ' behind to claw back.');
+    }
+    if(t.status === 'stopped') parts.push('Shift closed.');
+
+    els.paceLine.className = 'pace-line ' + (ahead >= 0 ? 'good' : 'bad');
+    els.paceLine.textContent = parts.join(' ');
+  }
+
+  function renderSetupSummary(){
+    var s = state.settings;
+    var bits = [];
+    bits.push('Target <b>' + formatNum(s.target) + ' ' + escapeHtml(s.unit) + '</b>');
+    bits.push(escapeHtml(minutesToLabel(parseTimeToMinutes(s.start))) + ' – ' + escapeHtml(minutesToLabel(parseTimeToMinutes(s.end))));
+    bits.push(s.blockMinutes === 30 ? '30-min blocks' : '60-min blocks');
+    if(s.breaks && s.breaks.length){
+      bits.push(s.breaks.length + (s.breaks.length === 1 ? ' break' : ' breaks'));
+    }
+    els.setupDesc.innerHTML = bits.join(' · ');
+  }
+
+  /* ================= history ================= */
+
+  function dayLabel(dateKey){
+    var parts = dateKey.split('-').map(Number);
+    var d = new Date(parts[0], parts[1]-1, parts[2]);
+    return d.toLocaleDateString(undefined, { weekday:'short', month:'short', day:'numeric', year:'numeric' });
+  }
+
+  function renderHistory(){
+    var logs = getAllLogs().filter(function(l){ return l.date !== state.log.date; });
+    if(logs.length === 0){
+      els.historyList.innerHTML = '<p class="history-empty">No previous days yet — come back tomorrow.</p>';
+      return;
+    }
+    var html = '';
+    logs.forEach(function(log){
+      var produced = log.actuals.reduce(function(sum,v){ return sum + (v ? Number(v) : 0); }, 0);
+      var pct = log.target > 0 ? Math.round((produced/log.target)*100) : 0;
+      var pctClass = pct >= 100 ? 'good' : 'bad';
+      html += '<div class="history-row" data-date="' + log.date + '">' +
+        '<div class="history-date">' + escapeHtml(dayLabel(log.date)) + '</div>' +
+        '<div class="history-mid">' + formatNum(produced) + ' / ' + formatNum(log.target) + ' ' + escapeHtml(log.unit || '') +
+        '<span class="history-pct ' + pctClass + '">' + pct + '%</span></div>' +
+        '</div>';
+      if(expandedHistoryDate === log.date){
+        html += '<div class="history-detail">' + historyDetailTable(log) + '</div>';
+      }
+    });
+    els.historyList.innerHTML = html;
+
+    Array.prototype.forEach.call(els.historyList.querySelectorAll('.history-row'), function(row){
+      row.addEventListener('click', function(){
+        var d = row.getAttribute('data-date');
+        expandedHistoryDate = (expandedHistoryDate === d) ? null : d;
+        renderHistory();
+      });
+    });
+  }
+
+  function slotsForLog(log){
+    var saved = state.settings;
+    state.settings = {
+      target: log.target, unit: log.unit, start: log.shiftStart, end: log.shiftEnd,
+      blockMinutes: log.blockMinutes, breaks: log.breaks || [],
+      adaptive: !!log.adaptive, earnBreak: !!log.earnBreak
+    };
+    var slots = buildTimeline(state.settings);
+    state.settings = saved;
+    return slots;
+  }
+
+  function historyDetailTable(log){
+    var slots = slotsForLog(log);
+    var rows = '';
+    slots.forEach(function(slot){
+      if(slot.type === 'break'){
+        rows += '<tr class="brk"><td>' + escapeHtml(slotLabel(slot)) + '</td><td>—</td><td>' + escapeHtml(slot.label) + '</td></tr>';
+        return;
+      }
+      var a = log.actuals[slot.workIndex];
+      var t = log.blockTargets && log.blockTargets[slot.workIndex] !== undefined ? log.blockTargets[slot.workIndex] : '';
+      rows += '<tr><td>' + escapeHtml(slotLabel(slot)) + '</td><td>' + formatNum(t) + '</td><td>' +
+        (a === null || a === undefined ? '—' : formatNum(a)) + '</td></tr>';
+    });
+    return '<table><tbody>' + rows + '</tbody></table>';
+  }
+
+  /* ================= wizard ================= */
+
+  function renderWizDots(){
+    var visible = visibleStepList();
+    var pos = visible.indexOf(wizIndex);
+    if(pos === -1){ pos = 0; wizIndex = visible[0]; }
+
+    var html = '';
+    for(var i=0;i<visible.length;i++){
+      var cls = i === pos ? 'active' : (i < pos ? 'done' : '');
+      html += '<div class="wiz-dot ' + cls + '"></div>';
+    }
+    els.wizDots.innerHTML = html;
+    els.wizTitle.textContent = WIZ_STEPS[wizIndex].title;
+    els.wizStepLabel.textContent = 'Step ' + (pos+1) + ' of ' + visible.length;
+    els.wizBack.classList.toggle('hidden', pos === 0);
+    els.wizNext.textContent = pos === visible.length - 1 ? 'Save shift' : 'Next';
+
+    Array.prototype.forEach.call(els.wizardPanel.querySelectorAll('.wiz-step'), function(el){
+      el.classList.toggle('hidden', parseInt(el.getAttribute('data-step'),10) !== wizIndex);
+    });
+  }
+
+  function goStep(stepNumber){
+    var visible = visibleStepList();
+    if(visible.indexOf(stepNumber) === -1) return;
+    wizIndex = stepNumber;
+    renderWizDots();
+  }
+
+  function nextStep(){
+    var visible = visibleStepList();
+    var pos = visible.indexOf(wizIndex);
+    if(pos === -1 || pos >= visible.length - 1) return false;
+    goStep(visible[pos+1]);
+    return true;
+  }
+
+  function prevStep(){
+    var visible = visibleStepList();
+    var pos = visible.indexOf(wizIndex);
+    if(pos <= 0) return;
+    goStep(visible[pos-1]);
+  }
+
+  function renderWizBreaks(){
+    if(wizBreaks.length === 0){
+      els.breakList.innerHTML = '<p class="history-empty" style="margin-bottom:10px;">No scheduled breaks yet.</p>';
+      return;
+    }
+    var html = '';
+    wizBreaks.forEach(function(b, i){
+      html += '<div class="break-edit">' +
+        '<input type="time" data-bi="' + i + '" data-bf="start" value="' + escapeHtml(b.start) + '">' +
+        '<input type="number" data-bi="' + i + '" data-bf="minutes" min="5" max="240" step="5" value="' + b.minutes + '" placeholder="min">' +
+        '<input type="text" data-bi="' + i + '" data-bf="label" maxlength="16" placeholder="Lunch" value="' + escapeHtml(b.label) + '">' +
+        '<button class="btn btn-ghost btn-small" data-bremove="' + i + '" type="button">✕</button>' +
+      '</div>';
+    });
+    els.breakList.innerHTML = html;
+
+    Array.prototype.forEach.call(els.breakList.querySelectorAll('input'), function(inp){
+      inp.addEventListener('input', function(){
+        var i = parseInt(inp.getAttribute('data-bi'),10);
+        var f = inp.getAttribute('data-bf');
+        if(!wizBreaks[i]) return;
+        if(f === 'minutes') wizBreaks[i].minutes = Math.max(0, parseInt(inp.value,10) || 0);
+        else wizBreaks[i][f] = inp.value;
+      });
+    });
+    Array.prototype.forEach.call(els.breakList.querySelectorAll('[data-bremove]'), function(btn){
+      btn.addEventListener('click', function(){
+        var i = parseInt(btn.getAttribute('data-bremove'),10);
+        wizBreaks.splice(i,1);
+        renderWizBreaks();
+      });
+    });
+  }
+
+  function validateStep(i){
+    var err = '';
+    if(i === 0){
+      var t = parseFloat(els.inTarget.value);
+      if(!(t > 0)) err = 'Enter a target greater than zero.';
+    } else if(i === 1){
+      if(!els.inUnit.value.trim()) err = 'Enter a unit, like pcs or doc.';
+    } else if(i === 2){
+      var sM = parseTimeToMinutes(els.inStart.value);
+      var eM = parseTimeToMinutes(els.inEnd.value);
+      if(sM === null) err = 'Set a start time.';
+      else if(eM === null) err = 'Set an end time.';
+      else if(sM === eM) err = 'Start and end can\'t be the same time.';
+    } else if(i === 4){
+      var sM2 = parseTimeToMinutes(els.inStart.value);
+      var span = shiftSpanMinutes({ start: els.inStart.value, end: els.inEnd.value });
+      for(var k=0;k<wizBreaks.length;k++){
+        var b = wizBreaks[k];
+        var bM = parseTimeToMinutes(b.start);
+        if(bM === null){ err = 'Break ' + (k+1) + ' needs a start time.'; break; }
+        var off = (((bM - sM2) % 1440) + 1440) % 1440;
+        if(off <= 0 || off >= span){ err = 'Break ' + (k+1) + ' sits outside the shift window.'; break; }
+        if(!(b.minutes > 0)){ err = 'Break ' + (k+1) + ' needs a length in minutes.'; break; }
+        if(off + b.minutes > span){ err = 'Break ' + (k+1) + ' runs past the end of the shift.'; break; }
+      }
+    } else if(i === 6){
+      var u = els.inWallpaper.value.trim();
+      if(u && !/^https?:\/\//i.test(u)) err = 'Enter a full URL starting with http:// or https://';
+    }
+    return err;
+  }
+
+  function showStepError(i, msg){
+    var box = document.getElementById('errStep' + i);
+    if(box) box.textContent = msg || '';
+  }
+
+  function openWizard(isEdit){
+    wizEditing = !!isEdit;
+    var s = state.settings;
+    if(s){
+      els.inTarget.value = s.target;
+      els.inUnit.value = s.unit;
+      els.inStart.value = s.start;
+      els.inEnd.value = s.end;
+      els.inBlock.value = String(s.blockMinutes || 60);
+      els.inAdaptive.checked = !!s.adaptive;
+      els.inEarnBreak.checked = !!s.earnBreak;
+      wizBreaks = (s.breaks || []).map(function(b){ return { start:b.start, minutes:b.minutes, label:b.label }; });
+    } else {
+      els.inAdaptive.checked = true;
+      els.inEarnBreak.checked = true;
+      wizBreaks = [];
+    }
+    renderWizBreaks();
+    els.inWallpaper.value = (state.settings && state.settings.wallpaper) || '';
+    wizOriginalWallpaper = els.inWallpaper.value;
+    ['errStep0','errStep1','errStep2','errStep4','errStep6'].forEach(function(id){
+      var el = document.getElementById(id); if(el) el.textContent = '';
+    });
+    els.wizCancel.classList.toggle('hidden', !wizEditing);
+    els.wizardPanel.classList.remove('hidden');
+    els.setupSummary.classList.add('hidden');
+    goStep(visibleStepList()[0]);
+  }
+
+  function closeWizard(){
+    els.wizardPanel.classList.add('hidden');
+  }
+
+  function collectSettings(){
+    return {
+      target: parseFloat(els.inTarget.value),
+      unit: els.inUnit.value.trim(),
+      start: els.inStart.value,
+      end: els.inEnd.value,
+      blockMinutes: parseInt(els.inBlock.value, 10) || 60,
+      breaks: wizBreaks.filter(function(b){ return b.start && b.minutes > 0; }).map(function(b){
+        return { start: b.start, minutes: Math.round(b.minutes), label: (b.label || 'Break').trim() || 'Break' };
+      }),
+      adaptive: !!els.inAdaptive.checked,
+      earnBreak: !!els.inEarnBreak.checked,
+      wallpaper: isAuthed()
+        ? els.inWallpaper.value.trim()
+        : ((state.settings && state.settings.wallpaper) || '')
+    };
+  }
+
+  /* ================= view switching ================= */
+
+  function showTrackingUI(){
+    els.setupSummary.classList.remove('hidden');
+    els.timerPanel.classList.remove('hidden');
+    els.readoutPanel.classList.remove('hidden');
+    els.hoursPanel.classList.remove('hidden');
+    els.actionsPanel.classList.remove('hidden');
+    els.historyPanel.classList.remove('hidden');
+    renderSetupSummary();
+    ensureTodayLog();
+    lastCurrentSlot = -2;
+    renderHours();
+    refreshTargetLabels();
+    renderTimer();
+    renderReadout();
+    renderPace();
+    renderHistory();
+  }
+
+  /* ================= auth UI ================= */
+
+  function refreshAuthUI(){
+    var on = isAuthed();
+    els.btnLogin.textContent = on ? 'Owner ✓' : 'Log in';
+    els.btnLogin.classList.toggle('locked', !on);
+    els.btnLogin.classList.toggle('unlocked', on);
+    els.btnLogin.title = on ? 'Signed in — tap to sign out' : 'Sign in to unlock wallpaper';
+  }
+
+  function openLogin(){
+    els.inLoginUser.value = '';
+    els.inLoginPass.value = '';
+    els.loginError.textContent = '';
+    els.loginModal.classList.remove('hidden');
+    setTimeout(function(){ els.inLoginUser.focus(); }, 30);
+  }
+  function closeLogin(){
+    els.loginModal.classList.add('hidden');
+  }
+
+  /* ================= events ================= */
+
+  els.wizBack.addEventListener('click', function(){ prevStep(); });
+
+  els.wizCancel.addEventListener('click', function(){
+    closeWizard();
+    applyWallpaper(wizOriginalWallpaper);
+    els.setupSummary.classList.remove('hidden');
+    if(!state.settings) openWizard(false);
+  });
+
+  els.wizNext.addEventListener('click', function(){
+    var err = validateStep(wizIndex);
+    showStepError(wizIndex, err);
+    if(err) return;
+    if(nextStep()) return;
+
+    var v = collectSettings();
+    var isFirstRun = !state.settings;
+    var structureChanged = !isFirstRun && slotSignature(buildTimeline(v)) !== slotSignature(state.slots);
+
+    state.settings = v;
+    saveSettings(v);
+    closeWizard();
+    applyWallpaper(v.wallpaper);
+    showTrackingUI();
+    lastCurrentSlot = -2;
+    renderHours();
+    refreshTargetLabels();
+
+    if(isFirstRun) showToast('Shift set. Tap Start shift when you begin.');
+    else if(structureChanged) showToast('Shift updated. Today\'s entries were kept where they fit.');
+    else showToast('Shift updated.');
+  });
+
+  els.inWallpaper.addEventListener('input', function(){
+    clearTimeout(wallpaperPreviewTimer);
+    wallpaperPreviewTimer = setTimeout(function(){
+      applyWallpaper(els.inWallpaper.value);
+    }, 600);
+  });
+
+  els.btnWallpaperClear.addEventListener('click', function(){
+    els.inWallpaper.value = '';
+    clearTimeout(wallpaperPreviewTimer);
+    applyWallpaper('');
+  });
+
+  els.btnAddBreak.addEventListener('click', function(){
+    var defaultStart = els.inStart.value || '12:00';
+    var sM = parseTimeToMinutes(defaultStart);
+    var mid = sM === null ? 780 : sM + Math.round(shiftSpanMinutes({ start: els.inStart.value, end: els.inEnd.value }) / 2);
+    var hh = Math.floor((((mid % 1440) + 1440) % 1440) / 60);
+    var mm = (((mid % 1440) + 1440) % 1440) % 60;
+    wizBreaks.push({
+      start: String(hh).padStart(2,'0') + ':' + String(mm).padStart(2,'0'),
+      minutes: 30,
+      label: 'Break'
+    });
+    renderWizBreaks();
+  });
+
+  els.btnEditSetup.addEventListener('click', function(){ openWizard(true); });
+
+  els.btnStart.addEventListener('click', startShift);
+  els.btnPause.addEventListener('click', pauseShift);
+  els.btnResume.addEventListener('click', resumeShift);
+  els.btnStop.addEventListener('click', stopShift);
+  els.btnReopen.addEventListener('click', reopenShift);
+  els.btnBreak.addEventListener('click', function(){
+    var t = state.log.timer;
+    if(t.breakSegmentStart) endBreak();
+    else startBreak('Break', false);
+  });
+
+  els.btnReset.addEventListener('click', function(){
+    if(!resetArmed){
+      resetArmed = true;
+      els.resetNote.textContent = 'Tap again to clear today\'s entries and the shift clock.';
+      els.btnReset.textContent = 'Confirm reset';
+      clearTimeout(els.btnReset._t);
+      els.btnReset._t = setTimeout(function(){
+        resetArmed = false;
+        els.btnReset.textContent = 'Reset day';
+        els.resetNote.textContent = '';
+      }, 4000);
+      return;
+    }
+    resetArmed = false;
+    els.btnReset.textContent = 'Reset day';
+    els.resetNote.textContent = '';
+    state.log.actuals = state.log.actuals.map(function(){ return null; });
+    state.log.blockTargets = baseTargets();
+    state.log.timer = newTimer();
+    state.log.breaksTaken = [];
+    recomputeTargets();
+    saveLog(state.log.date, state.log);
+    lastCurrentSlot = -2;
+    renderHours();
+    refreshTargetLabels();
+    renderTimer();
+    renderReadout();
+    renderPace();
+    showToast('Today\'s entries cleared.');
+  });
+
+  els.btnExport.addEventListener('click', function(){ exportDayReport(state.log); });
+  els.btnExportHistory.addEventListener('click', exportHistoryReport);
+
+  els.btnLogin.addEventListener('click', function(){
+    if(isAuthed()){
+      setAuthed(false);
+      refreshAuthUI();
+      if(wizIndex === 6) goStep(5);
+      showToast('Signed out. Wallpaper settings locked.');
+    } else {
+      openLogin();
+    }
+  });
+
+  els.btnLoginCancel.addEventListener('click', closeLogin);
+
+  els.btnLoginSubmit.addEventListener('click', function(){
+    var u = els.inLoginUser.value.trim();
+    var p = els.inLoginPass.value;
+    if(u === OWNER_USER && p === OWNER_PASS){
+      setAuthed(true);
+      closeLogin();
+      refreshAuthUI();
+      if(!els.wizardPanel.classList.contains('hidden')) renderWizDots();
+      showToast('Signed in. Wallpaper step unlocked.');
+    } else {
+      els.loginError.textContent = 'Incorrect username or password.';
+      els.inLoginPass.value = '';
+      els.inLoginPass.focus();
+    }
+  });
+
+  els.loginModal.addEventListener('click', function(ev){
+    if(ev.target === els.loginModal) closeLogin();
+  });
+  [els.inLoginUser, els.inLoginPass].forEach(function(inp){
+    inp.addEventListener('keydown', function(ev){
+      if(ev.key === 'Enter'){ ev.preventDefault(); els.btnLoginSubmit.click(); }
+      if(ev.key === 'Escape'){ closeLogin(); }
+    });
+  });
+
+  /* ================= export ================= */
+
+  function exportDayReport(log){
+    var slots = slotsForLog(log);
+    var produced = log.actuals.reduce(function(sum,v){ return sum + (v ? Number(v) : 0); }, 0);
+    var remaining = Math.max(0, log.target - produced);
+    var pct = log.target > 0 ? Math.round((produced/log.target)*100) : 0;
+    var t = log.timer || newTimer();
+
+    var rows = [
+      ['Production Hisab — Daily Report'],
+      ['Date', log.date],
+      ['Unit', log.unit],
+      ['Shift', minutesToLabel(parseTimeToMinutes(log.shiftStart)) + ' to ' + minutesToLabel(parseTimeToMinutes(log.shiftEnd))],
+      ['Block length', log.blockMinutes + ' min'],
+      ['Adaptive targets', log.adaptive ? 'On' : 'Off'],
+      ['Earned break', log.earnBreak ? 'On' : 'Off'],
+      [],
+      ['Target', log.target],
+      ['Produced', Math.round(produced*100)/100],
+      ['Remaining', Math.round(remaining*100)/100],
+      ['% achieved', pct + '%'],
+      [],
+      ['Shift clock', fmtDuration(elapsedMs(t))],
+      ['Production time', fmtDuration(prodMs(t))],
+      ['Break taken', fmtDuration(breakMs(t))],
+      [],
+      ['Block', 'Type', 'Block target', 'Actual produced', 'Status']
+    ];
+
+    slots.forEach(function(slot){
+      if(slot.type === 'break'){
+        rows.push([slotLabel(slot), slot.label, '', '', 'Scheduled break']);
+        return;
+      }
+      var a = log.actuals[slot.workIndex];
+      var tgt = log.blockTargets && log.blockTargets[slot.workIndex] !== undefined ? log.blockTargets[slot.workIndex] : '';
+      var status = (a === null || a === undefined) ? 'Not logged' : (Number(a) >= tgt ? 'On target' : 'Behind');
+      rows.push([
+        slotLabel(slot), 'Work',
+        tgt === '' ? '' : Math.round(tgt*100)/100,
+        (a === null || a === undefined) ? '' : Math.round(a*100)/100,
+        status
+      ]);
+    });
+
+    if(log.breaksTaken && log.breaksTaken.length){
+      rows.push([]);
+      rows.push(['Breaks taken', 'Kind', 'Minutes']);
+      log.breaksTaken.forEach(function(b){
+        rows.push([new Date(b.start).toLocaleTimeString(undefined,{hour:'2-digit',minute:'2-digit'}), b.kind, Math.round(b.minutes*100)/100]);
+      });
+    }
+
+    var ws = XLSX.utils.aoa_to_sheet(rows);
+    ws['!cols'] = [{wch:22},{wch:16},{wch:14},{wch:16},{wch:16}];
+    var wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, ws, 'Report');
+    var wbout = XLSX.write(wb, { bookType:'xlsx', type:'array' });
+    doDownload('production-hisab-' + log.date + '.xlsx', new Blob([wbout], { type:'application/octet-stream' }));
+  }
+
+  function exportHistoryReport(){
+    var logs = getAllLogs().slice().sort(function(a,b){ return a.date < b.date ? -1 : (a.date > b.date ? 1 : 0); });
+    if(logs.length === 0){ showToast('No history to export yet.'); return; }
+
+    var summaryRows = [['Date','Unit','Target','Produced','Remaining','% achieved','Break taken (min)']];
+    var detailRows = [['Date','Block','Type','Block target','Actual produced','Status']];
+
+    logs.forEach(function(log){
+      var produced = log.actuals.reduce(function(sum,v){ return sum + (v ? Number(v) : 0); }, 0);
+      var remaining = Math.max(0, log.target - produced);
+      var pct = log.target > 0 ? Math.round((produced/log.target)*100) : 0;
+      var t = log.timer || newTimer();
+      summaryRows.push([
+        log.date, log.unit, log.target,
+        Math.round(produced*100)/100,
+        Math.round(remaining*100)/100,
+        pct + '%',
+        Math.round((breakMs(t)/60000)*100)/100
+      ]);
+
+      slotsForLog(log).forEach(function(slot){
+        if(slot.type === 'break'){
+          detailRows.push([log.date, slotLabel(slot), 'Break: ' + slot.label, '', '', '']);
+          return;
+        }
+        var a = log.actuals[slot.workIndex];
+        var tgt = log.blockTargets && log.blockTargets[slot.workIndex] !== undefined ? log.blockTargets[slot.workIndex] : '';
+        var status = (a === null || a === undefined) ? 'Not logged' : (Number(a) >= tgt ? 'On target' : 'Behind');
+        detailRows.push([
+          log.date, slotLabel(slot), 'Work',
+          tgt === '' ? '' : Math.round(tgt*100)/100,
+          (a === null || a === undefined) ? '' : Math.round(a*100)/100,
+          status
+        ]);
+      });
+    });
+
+    var wsSummary = XLSX.utils.aoa_to_sheet(summaryRows);
+    wsSummary['!cols'] = [{wch:12},{wch:10},{wch:10},{wch:10},{wch:10},{wch:11},{wch:16}];
+    var wsDetail = XLSX.utils.aoa_to_sheet(detailRows);
+    wsDetail['!cols'] = [{wch:12},{wch:22},{wch:18},{wch:12},{wch:14},{wch:12}];
+
+    var wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, wsSummary, 'Summary');
+    XLSX.utils.book_append_sheet(wb, wsDetail, 'Detail');
+    var wbout = XLSX.write(wb, { bookType:'xlsx', type:'array' });
+    var range = logs[0].date + '_to_' + logs[logs.length-1].date;
+    doDownload('production-hisab-history-' + range + '.xlsx', new Blob([wbout], { type:'application/octet-stream' }));
+  }
+
+  function doDownload(filename, blob){
+    if(window.claude && typeof window.claude.use === 'function'){
+      window.claude.use('downloads').then(function(downloads){
+        if(!downloads){ showToast('Downloads aren\'t available in this view.'); return; }
+        return downloads.save({ filename: filename, data: blob }).then(function(res){
+          showToast(res && res.status === 'delivered' ? 'Report sent.' : 'Report saved.');
+        });
+      }).catch(function(err){
+        if(err && err.code === 'declined') return;
+        showToast('Could not save the report.');
+      });
+    } else {
+      try{
+        var url = URL.createObjectURL(blob);
+        var a = document.createElement('a');
+        a.href = url; a.download = filename;
+        document.body.appendChild(a); a.click();
+        document.body.removeChild(a);
+        setTimeout(function(){ URL.revokeObjectURL(url); }, 2000);
+        showToast('Report downloaded.');
+      }catch(e){
+        showToast('Downloads aren\'t available in this view.');
+      }
+    }
+  }
+
+  /* ================= tick ================= */
+
+  function tick(){
+    if(!state.log) return;
+    var t = state.log.timer;
+
+    if(t.status === 'running'){
+      var changed = checkAutoBreak();
+      var slot = currentSlotIndex();
+      if(slot !== lastCurrentSlot){
+        lastCurrentSlot = slot;
+        renderHours();
+        refreshTargetLabels();
+      }
+      if(!changed) renderTimer();
+      else { renderTimer(); renderReadout(); renderPace(); }
+    } else {
+      renderTimer();
+    }
+  }
+
+  /* ================= init ================= */
+
+  tickClock();
+  setInterval(tickClock, 15000);
+  setInterval(tick, 1000);
+  refreshAuthUI();
+
+  state.settings = loadSettings();
+  if(state.settings){
+    if(state.settings.blockMinutes !== 30 && state.settings.blockMinutes !== 60) state.settings.blockMinutes = 60;
+    if(!state.settings.breaks) state.settings.breaks = [];
+    if(state.settings.adaptive === undefined) state.settings.adaptive = true;
+    if(state.settings.earnBreak === undefined) state.settings.earnBreak = true;
+    if(state.settings.wallpaper === undefined) state.settings.wallpaper = '';
+    closeWizard();
+    applyWallpaper(state.settings.wallpaper);
+    showTrackingUI();
+  } else {
+    openWizard(false);
+  }
+
+})();
+</script>
+</body>
+</html>
